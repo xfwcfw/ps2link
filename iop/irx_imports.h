@@ -11,7 +11,6 @@
 
 #include "irx.h"
 
-
 /* Please keep these in alphabetical order!  */
 #include "cdvdman.h"
 #include "intrman.h"

@@ -25,7 +25,10 @@
 #ifdef DEBUG
 #define dbgprintf(args...) printf(args)
 #else
-#define dbgprintf(args...) do { } while(0)
+#define dbgprintf(args...)                                                                                                                                     \
+	do                                                                                                                                                     \
+	{                                                                                                                                                      \
+	} while (0)
 #endif
 
 //////////////////////////////////////////////////////////////////////////
@@ -36,7 +39,7 @@ extern int fsysUnmount(void);
 
 #define BUF_SIZE 1024
 static char recvbuf[BUF_SIZE] __attribute__((aligned(16)));
-static unsigned int rpc_data[1024/4]__attribute__((aligned(16)));
+static unsigned int rpc_data[1024 / 4] __attribute__((aligned(16)));
 
 int excepscrdump = 1;
 
@@ -44,262 +47,258 @@ int excepscrdump = 1;
 //unsigned int *dma_ptr =(unsigned int*)(0x20100000-2048);
 
 //////////////////////////////////////////////////////////////////////////
-static void 
-pkoExecIop(char *buf, int len)
+static void pkoExecIop(char *buf, int len)
 {
-    pko_pkt_execiop_req *cmd;
-    int retval;
-    int arglen;
-    char *path;
-    char *args;
-    unsigned int argc;
-    int id;
-    int i;
+	pko_pkt_execiop_req *cmd;
+	int retval;
+	int arglen;
+	char *path;
+	char *args;
+	unsigned int argc;
+	int id;
+	int i;
 
-    cmd = (pko_pkt_execiop_req *)buf;
+	cmd = (pko_pkt_execiop_req *)buf;
 
-    dbgprintf("IOP cmd: EXECIOP\n");
+	dbgprintf("IOP cmd: EXECIOP\n");
 
-    if (len != sizeof(pko_pkt_execiop_req)) {
-        dbgprintf("IOP cmd: exec_iop got a broken packet (%d)!\n", len);
-        return;
-    }
+	if (len != sizeof(pko_pkt_execiop_req))
+	{
+		dbgprintf("IOP cmd: exec_iop got a broken packet (%d)!\n", len);
+		return;
+	}
 
-    // Make sure arg vector is null-terminated
-    cmd->argv[PKO_MAX_PATH-1] = '\0';
+	// Make sure arg vector is null-terminated
+	cmd->argv[PKO_MAX_PATH - 1] = '\0';
 
-    printf("IOP cmd: %ld args\n", ntohl(cmd->argc));
+	printf("IOP cmd: %ld args\n", ntohl(cmd->argc));
 
-    path = &cmd->argv[0];
-    args = &cmd->argv[strlen(cmd->argv) + 1];
-    argc = ntohl(cmd->argc);
+	path = &cmd->argv[0];
+	args = &cmd->argv[strlen(cmd->argv) + 1];
+	argc = ntohl(cmd->argc);
 
-    arglen = 0;
-    for (i = 0; i < (argc - 1); i++) {
-        printf("arg %d: %s (%d)\n", i, &args[arglen], arglen);
-        arglen += strlen(&args[arglen]) + 1;
-    }
+	arglen = 0;
+	for (i = 0; i < (argc - 1); i++)
+	{
+		printf("arg %d: %s (%d)\n", i, &args[arglen], arglen);
+		arglen += strlen(&args[arglen]) + 1;
+	}
 
-    id = LoadStartModule(cmd->argv, arglen, args, &retval);
-    
-    if (id < 0) {
-        printf("Error loading module: ");
-	switch (-id) {
-	case E_IOP_INTR_CONTEXT:
-	    printf("IOP is in exception context.\n");
-	    break;
-	case E_IOP_DEPENDANCY:
-	    printf("Inter IRX dependancy error.\n");
-	    break;
-	case E_LF_NOT_IRX:
-	    printf("Invalid IRX module.\n");
-	    break;
-	case E_LF_FILE_NOT_FOUND:
-	    printf("Unable to open executable file.\n");
-	    break;
-	case E_LF_FILE_IO_ERROR:
-	    printf("Error while accessing file.\n");
-	    break;
-	case E_IOP_NO_MEMORY:
-	    printf("IOP is out of memory.\n");
-	    break;
-	default:
-	    printf("Unknow error code: %d\n", -retval);
-	    break;
-	}					
-    } else {
-	printf("loadmodule: id %d, ret %d\n", id, retval);
-    }
+	id = LoadStartModule(cmd->argv, arglen, args, &retval);
+
+	if (id < 0)
+	{
+		printf("Error loading module: ");
+		switch (-id)
+		{
+		case E_IOP_INTR_CONTEXT:
+			printf("IOP is in exception context.\n");
+			break;
+		case E_IOP_DEPENDANCY:
+			printf("Inter IRX dependancy error.\n");
+			break;
+		case E_LF_NOT_IRX:
+			printf("Invalid IRX module.\n");
+			break;
+		case E_LF_FILE_NOT_FOUND:
+			printf("Unable to open executable file.\n");
+			break;
+		case E_LF_FILE_IO_ERROR:
+			printf("Error while accessing file.\n");
+			break;
+		case E_IOP_NO_MEMORY:
+			printf("IOP is out of memory.\n");
+			break;
+		default:
+			printf("Unknow error code: %d\n", -retval);
+			break;
+		}
+	}
+	else
+	{
+		printf("loadmodule: id %d, ret %d\n", id, retval);
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////
-unsigned int
-pkoSetSifDma(void *dest, void *src, unsigned int length, unsigned int mode)
+unsigned int pkoSetSifDma(void *dest, void *src, unsigned int length, unsigned int mode)
 {
-    struct t_SifDmaTransfer sendData;
-    int oldIrq;
-    int id;
+	struct t_SifDmaTransfer sendData;
+	int oldIrq;
+	int id;
 
-    sendData.src = (unsigned int *)src;
-    sendData.dest = (unsigned int *)dest;
-    sendData.size = length;
-    sendData.attr = mode;
+	sendData.src = (unsigned int *)src;
+	sendData.dest = (unsigned int *)dest;
+	sendData.size = length;
+	sendData.attr = mode;
 
-    CpuSuspendIntr(&oldIrq);
-    id = sceSifSetDma(&sendData, 1);
-    CpuResumeIntr(oldIrq);
+	CpuSuspendIntr(&oldIrq);
+	id = sceSifSetDma(&sendData, 1);
+	CpuResumeIntr(oldIrq);
 
-    return id;
+	return id;
 }
 
 //////////////////////////////////////////////////////////////////////////
-unsigned int
-pkoSendSifCmd(unsigned int cmd, void *src, unsigned int len)
+unsigned int pkoSendSifCmd(unsigned int cmd, void *src, unsigned int len)
 {
-    unsigned int dmaId;
+	unsigned int dmaId;
 
-    rpc_data[0] = cmd;
+	rpc_data[0] = cmd;
 
-    memcpy(&rpc_data[1], src, 
-           (len > sizeof(rpc_data) ? sizeof(rpc_data) : len));
+	memcpy(&rpc_data[1], src, (len > sizeof(rpc_data) ? sizeof(rpc_data) : len));
 
-    len = len > sizeof(rpc_data) ? sizeof(rpc_data) : len;
+	len = len > sizeof(rpc_data) ? sizeof(rpc_data) : len;
 
-    dmaId = pkoSetSifDma(PKO_DMA_DEST, rpc_data, len, 4);
+	dmaId = pkoSetSifDma(PKO_DMA_DEST, rpc_data, len, 4);
 
-    if(dmaId == 0) {
-        printf("IOP: sifSendCmd %x failed\n", cmd);
-        return -1;
-    }
-    return 0;
-}
-
-
-//////////////////////////////////////////////////////////////////////////
-static void 
-pkoExecEE(char *buf, int len)
-{
-    int ret;
-
-    ret = pkoSendSifCmd(PKO_RPC_EXECEE, buf, len);
-};
-//////////////////////////////////////////////////////////////////////////
-static void 
-pkoGSExec(char *buf, int len)
-{
-    int ret;
-
-    ret = pkoSendSifCmd(PKO_RPC_GSEXEC, buf, len);
-};
-//////////////////////////////////////////////////////////////////////////
-static void 
-pkoNetDump(char *buf, int len)
-{
-    int ret;
-
-    ret = pkoSendSifCmd(PKO_RPC_NETDUMP, buf, len);
-};
-//////////////////////////////////////////////////////////////////////////
-static void 
-pkoScrDump(char *buf, int len)
-{
-    int ret;
-
-    ret = pkoSendSifCmd(PKO_RPC_SCRDUMP, buf, len);
-};
-
-//////////////////////////////////////////////////////////////////////////
-static void
-pkoPowerOff()
-{
-    PoweroffShutdown();
+	if (dmaId == 0)
+	{
+		printf("IOP: sifSendCmd %x failed\n", cmd);
+		return -1;
+	}
+	return 0;
 }
 
 //////////////////////////////////////////////////////////////////////////
-static void 
-pkoReset(char *buf, int len)
+static void pkoExecEE(char *buf, int len)
 {
-    int ret;
+	int ret;
 
-    dbgprintf("IOP cmd: RESET\n");
-
-    if (len != sizeof(pko_pkt_reset_req)) {
-        dbgprintf("IOP cmd: exec_ee got a broken packet (%d)!\n", len);
-        return;
-    }
-
-    printf("unmounting\n");
-    fsysUnmount();
-    printf("unmounted\n");
-    DelDrv("tty");
-
-    ret = pkoSendSifCmd(PKO_RPC_RESET, buf, len);
+	ret = pkoSendSifCmd(PKO_RPC_EXECEE, buf, len);
 };
+//////////////////////////////////////////////////////////////////////////
+static void pkoGSExec(char *buf, int len)
+{
+	int ret;
 
-static void
-pkoStopVU(char *buf, int len) {
-    int ret;
-
-    ret = pkoSendSifCmd(PKO_RPC_STOPVU, buf, len);
+	ret = pkoSendSifCmd(PKO_RPC_GSEXEC, buf, len);
 };
+//////////////////////////////////////////////////////////////////////////
+static void pkoNetDump(char *buf, int len)
+{
+	int ret;
 
-static void
-pkoStartVU(char *buf, int len)  {
-    int ret;
-    ret = pkoSendSifCmd(PKO_RPC_STARTVU, buf, len);
+	ret = pkoSendSifCmd(PKO_RPC_NETDUMP, buf, len);
 };
+//////////////////////////////////////////////////////////////////////////
+static void pkoScrDump(char *buf, int len)
+{
+	int ret;
 
-static void
-pkoDumpMem(char *buf, int len) {
-    int ret;
-    ret = pkoSendSifCmd(PKO_RPC_DUMPMEM, buf, len);
-};
-
-static void
-pkoDumpReg(char *buf, int len) {
-    int ret;
-    ret = pkoSendSifCmd(PKO_RPC_DUMPREG, buf, len);
-};
-
-static void
-pkoWriteMem(char *buf, int len) {
-    int ret;
-    ret = pkoSendSifCmd(PKO_RPC_WRITEMEM, buf, len);
+	ret = pkoSendSifCmd(PKO_RPC_SCRDUMP, buf, len);
 };
 
 //////////////////////////////////////////////////////////////////////////
-static void 
-cmdListener(int sock)
+static void pkoPowerOff()
 {
-    int done;
-    int len;
-    int addrlen;
-    unsigned int cmd;
-    pko_pkt_hdr *header;
-    struct sockaddr_in remote_addr;
+	PoweroffShutdown();
+}
 
-    done = 0;
+//////////////////////////////////////////////////////////////////////////
+static void pkoReset(char *buf, int len)
+{
+	int ret;
 
-    while(!done) {
+	dbgprintf("IOP cmd: RESET\n");
 
-        addrlen = sizeof(remote_addr);
-        len = recvfrom(sock, &recvbuf[0], BUF_SIZE, 0, 
-                            (struct sockaddr *)&remote_addr, 
-                            &addrlen);
-        dbgprintf("IOP cmd: received packet (%d)\n", len);
+	if (len != sizeof(pko_pkt_reset_req))
+	{
+		dbgprintf("IOP cmd: exec_ee got a broken packet (%d)!\n", len);
+		return;
+	}
 
-        if (len < 0) {
-            dbgprintf("IOP: cmdListener: recvfrom error (%d)\n", len);
-            continue;
-        }
-        if (len < sizeof(pko_pkt_hdr)) {
-            continue;
-        }
+	printf("unmounting\n");
+	fsysUnmount();
+	printf("unmounted\n");
+	DelDrv("tty");
 
-        header = (pko_pkt_hdr *)recvbuf;
-        cmd = ntohl(header->cmd);
-        switch (cmd) {
+	ret = pkoSendSifCmd(PKO_RPC_RESET, buf, len);
+};
 
-        case PKO_EXECIOP_CMD:
-            pkoExecIop(recvbuf, len);
-            break;
-        case PKO_EXECEE_CMD:
-            pkoExecEE(recvbuf, len);
-            break;
-        case PKO_POWEROFF_CMD:
-            pkoPowerOff();
-            break;
-        case PKO_RESET_CMD:
-            pkoReset(recvbuf, len);
-            break;
-        case PKO_SCRDUMP_CMD:
+static void pkoStopVU(char *buf, int len)
+{
+	int ret;
+
+	ret = pkoSendSifCmd(PKO_RPC_STOPVU, buf, len);
+};
+
+static void pkoStartVU(char *buf, int len)
+{
+	int ret;
+	ret = pkoSendSifCmd(PKO_RPC_STARTVU, buf, len);
+};
+
+static void pkoDumpMem(char *buf, int len)
+{
+	int ret;
+	ret = pkoSendSifCmd(PKO_RPC_DUMPMEM, buf, len);
+};
+
+static void pkoDumpReg(char *buf, int len)
+{
+	int ret;
+	ret = pkoSendSifCmd(PKO_RPC_DUMPREG, buf, len);
+};
+
+static void pkoWriteMem(char *buf, int len)
+{
+	int ret;
+	ret = pkoSendSifCmd(PKO_RPC_WRITEMEM, buf, len);
+};
+
+//////////////////////////////////////////////////////////////////////////
+static void cmdListener(int sock)
+{
+	int done;
+	int len;
+	int addrlen;
+	unsigned int cmd;
+	pko_pkt_hdr *header;
+	struct sockaddr_in remote_addr;
+
+	done = 0;
+
+	while (!done)
+	{
+		addrlen = sizeof(remote_addr);
+		len = recvfrom(sock, &recvbuf[0], BUF_SIZE, 0, (struct sockaddr *)&remote_addr, &addrlen);
+		dbgprintf("IOP cmd: received packet (%d)\n", len);
+
+		if (len < 0)
+		{
+			dbgprintf("IOP: cmdListener: recvfrom error (%d)\n", len);
+			continue;
+		}
+		if (len < sizeof(pko_pkt_hdr))
+		{
+			continue;
+		}
+
+		header = (pko_pkt_hdr *)recvbuf;
+		cmd = ntohl(header->cmd);
+		switch (cmd)
+		{
+		case PKO_EXECIOP_CMD:
+			pkoExecIop(recvbuf, len);
+			break;
+		case PKO_EXECEE_CMD:
+			pkoExecEE(recvbuf, len);
+			break;
+		case PKO_POWEROFF_CMD:
+			pkoPowerOff();
+			break;
+		case PKO_RESET_CMD:
+			pkoReset(recvbuf, len);
+			break;
+		case PKO_SCRDUMP_CMD:
 			excepscrdump = 1;
-            pkoScrDump(recvbuf, len);
-            break;
-        case PKO_NETDUMP_CMD:
+			pkoScrDump(recvbuf, len);
+			break;
+		case PKO_NETDUMP_CMD:
 			excepscrdump = 0;
-            pkoNetDump(recvbuf, len);
-            break;
+			pkoNetDump(recvbuf, len);
+			break;
 		case PKO_START_VU:
 			pkoStartVU(recvbuf, len);
 			break;
@@ -315,19 +314,18 @@ cmdListener(int sock)
 		case PKO_GSEXEC_CMD:
 			pkoGSExec(recvbuf, len);
 			break;
-        case PKO_WRITE_MEM:
-            pkoWriteMem(recvbuf, len);
-            break;
-        default: 
-            dbgprintf("IOP cmd: Uknown cmd received\n");
-            break;
-        }
-        dbgprintf("IOP cmd: waiting for next pkt\n");
-    }
+		case PKO_WRITE_MEM:
+			pkoWriteMem(recvbuf, len);
+			break;
+		default:
+			dbgprintf("IOP cmd: Uknown cmd received\n");
+			break;
+		}
+		dbgprintf("IOP cmd: waiting for next pkt\n");
+	}
 }
 
-static void
-cmdPowerOff(void *arg)
+static void cmdPowerOff(void *arg)
 {
 #ifdef PWOFFONRESET
 	pkoPowerOff();
@@ -337,75 +335,77 @@ cmdPowerOff(void *arg)
 	reset.cmd = htonl(PKO_RESET_CMD);
 	reset.len = 0;
 
-	pkoReset((unsigned char *) &reset, sizeof(reset));
+	pkoReset((unsigned char *)&reset, sizeof(reset));
 #endif
 }
 
 //////////////////////////////////////////////////////////////////////////
-static void 
-cmdThread(void *arg)
+static void cmdThread(void *arg)
 {
-    struct sockaddr_in serv_addr;
-    //    struct sockaddr_in remote_addr;
-    int sock;
-    int ret;
+	struct sockaddr_in serv_addr;
+	//    struct sockaddr_in remote_addr;
+	int sock;
+	int ret;
 
-    dbgprintf( "IOP cmd: Server Thread Started.\n" );
+	dbgprintf("IOP cmd: Server Thread Started.\n");
 
-    sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    if (sock < 0)
-    {
-        dbgprintf( "IOP cmd: Socket error %d\n", sock);
-        ExitDeleteThread();
-    }
+	sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if (sock < 0)
+	{
+		dbgprintf("IOP cmd: Socket error %d\n", sock);
+		ExitDeleteThread();
+	}
 
-    memset((void *)&serv_addr, 0, sizeof(serv_addr));
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    serv_addr.sin_port = htons(PKO_CMD_PORT);
-   
-    ret = bind(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
-    if (ret < 0) {
-        dbgprintf("IOP cmd: Udp bind error (%d)\n", sock);
-        ExitDeleteThread();
-    }
+	memset((void *)&serv_addr, 0, sizeof(serv_addr));
+	serv_addr.sin_family = AF_INET;
+	serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	serv_addr.sin_port = htons(PKO_CMD_PORT);
 
-    // Do tha thing
-    dbgprintf("IOP cmd: Listening\n");
+	ret = bind(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
+	if (ret < 0)
+	{
+		dbgprintf("IOP cmd: Udp bind error (%d)\n", sock);
+		ExitDeleteThread();
+	}
 
-    cmdListener(sock);
+	// Do tha thing
+	dbgprintf("IOP cmd: Listening\n");
 
-    ExitDeleteThread();
+	cmdListener(sock);
+
+	ExitDeleteThread();
 }
-
 
 //////////////////////////////////////////////////////////////////////////
 int cmdHandlerInit(void)
 {
-    iop_thread_t thread;
-    int pid;
-    int ret;
+	iop_thread_t thread;
+	int pid;
+	int ret;
 
-    dbgprintf("IOP cmd: Starting thread\n");
+	dbgprintf("IOP cmd: Starting thread\n");
 
-    SifInitRpc(0);
-    SetPowerButtonHandler(cmdPowerOff, NULL);
+	SifInitRpc(0);
+	SetPowerButtonHandler(cmdPowerOff, NULL);
 
-    thread.attr = 0x02000000;
-    thread.option = 0;
-    thread.thread = (void *)cmdThread;
-    thread.stacksize = 0x800;
-    thread.priority = 60; //0x1e;
+	thread.attr = 0x02000000;
+	thread.option = 0;
+	thread.thread = (void *)cmdThread;
+	thread.stacksize = 0x800;
+	thread.priority = 60; //0x1e;
 
-    pid = CreateThread(&thread);
-    if (pid >= 0) {
-        ret = StartThread(pid, 0);
-        if (ret < 0) {
-            dbgprintf("IOP cmd: Could not start thread\n");
-        }
-    }
-    else {
-        dbgprintf("IOP cmd: Could not create thread\n");
-    }
-    return 0;
+	pid = CreateThread(&thread);
+	if (pid >= 0)
+	{
+		ret = StartThread(pid, 0);
+		if (ret < 0)
+		{
+			dbgprintf("IOP cmd: Could not start thread\n");
+		}
+	}
+	else
+	{
+		dbgprintf("IOP cmd: Could not create thread\n");
+	}
+	return 0;
 }

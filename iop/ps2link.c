@@ -22,37 +22,34 @@ extern int naplinkRpcInit(void);
 ////////////////////////////////////////////////////////////////////////
 // main
 //   start threads & init rpc & filesys
-int
-_start( int argc, char **argv)
+int _start(int argc, char **argv)
 {
-    FlushDcache();
-    CpuEnableIntr(0);
+	FlushDcache();
+	CpuEnableIntr(0);
 
-    sceCdInit(1);
-    sceCdStop();
+	sceCdInit(1);
+	sceCdStop();
 
-    SifInitRpc(0);
+	SifInitRpc(0);
 
-
-
-    if ((argc < 2) || (strncmp(argv[1], "-notty", 6))) {
+	if ((argc < 2) || (strncmp(argv[1], "-notty", 6)))
+	{
 		ttyMount();
-        // Oh well.. There's a bug in either smapif or lwip's etharp
-        // that thrashes udp msgs which are queued while waiting for arp
-        // request
-        // alas, this msg will probably not be displayed
-        printf("tty mounted\n");
-    }
+		// Oh well.. There's a bug in either smapif or lwip's etharp
+		// that thrashes udp msgs which are queued while waiting for arp
+		// request
+		// alas, this msg will probably not be displayed
+		printf("tty mounted\n");
+	}
 
-    fsysMount();
+	fsysMount();
 	printf("host: mounted\n");
-    cmdHandlerInit();
+	cmdHandlerInit();
 	printf("IOP cmd thread started\n");
-    naplinkRpcInit();
+	naplinkRpcInit();
 	printf("Naplink thread started\n");
-	
+
 	installExceptionHandlers();
 
-    return 0;
+	return 0;
 }
-
