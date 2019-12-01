@@ -2,6 +2,9 @@
 *.elf
 *.erl
 *.irx
+*.bin
+*.kelf
 *.o
 bin/*.ELF
 bin/*.IRX
+bin/*.KELF

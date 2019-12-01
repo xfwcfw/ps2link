@@ -19,7 +19,7 @@ EE_ASFLAGS := -G0 $(EE_ASFLAGS)
 # libkernel is the last library to be linked.
 EE_LIBS += -lc -lkernel-nopatch
 
-# Externally defined variables: EE_BIN, EE_OBJS, EE_LIB
+# Externally defined variables: EE_KELF, EE_ELF, EE_BIN, EE_OBJS, EE_LIB
 
 # These macros can be used to simplify certain build rules.
 EE_C_COMPILE = $(EE_CC) $(EE_CFLAGS) $(EE_INCS)
@@ -37,9 +37,15 @@ EE_CXX_COMPILE = $(EE_CC) $(EE_CXXFLAGS) $(EE_INCS)
 %.o : %.s
 	$(EE_AS) $(EE_ASFLAGS) $< -o $@
 
-$(EE_BIN) : $(EE_OBJS) $(PS2SDK)/ee/startup/crt0.o
+$(EE_ELF) : $(EE_OBJS) $(PS2SDK)/ee/startup/crt0.o
 	$(EE_CC) -nostartfiles -T$(PS2SDK)/ee/startup/linkfile $(EE_LDFLAGS) \
-		-o $(EE_BIN) $(PS2SDK)/ee/startup/crt0.o $(EE_OBJS) $(EE_LIBS)
+		-o $(EE_ELF) $(PS2SDK)/ee/startup/crt0.o $(EE_OBJS) $(EE_LIBS)
+
+$(EE_BIN) : $(EE_ELF)
+	$(EE_OBJCOPY) -S -O binary $< $@
+
+$(EE_KELF) : $(EE_BIN)
+	kelftool encrypt $< $@
 
 $(EE_LIB) : $(EE_OBJS)
 	$(EE_AR) cru $(EE_LIB) $(EE_OBJS)

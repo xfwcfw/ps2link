@@ -1,4 +1,6 @@
-EE_BIN  = ps2link.elf
+EE_KELF  = ps2link.kelf
+EE_BIN  = ps2link.bin
+EE_ELF  = ps2link.elf
 EE_OBJS = ps2link.o cmdHandler.o excepHandler.o exceptions.o
 EE_INCS += -I../include
 
@@ -34,10 +36,10 @@ else
 EE_LDFLAGS += -s
 endif
 
-all: $(EE_BIN)
+all: $(EE_KELF)
 
 clean:
-	-rm -f $(EE_OBJS) $(EE_BIN)
+	-rm -f $(EE_OBJS) $(EE_ELF) $(EE_BIN) $(EE_KELF)
 
 check: $(EE_BIN)
 	@ee-readelf -l $(EE_BIN) | awk ' /LOAD/ { if ((spare = (-($$4 + $$6) + ("'$(STACKADDR)'" - "0x8000"))) <= 0) { printf("PS2Link is too big, %i (0x%x) bytes missing\n", -spare, -spare); exit -1; } else { printf("PS2Link has %i (0x%x) spare bytes\n", spare, spare) } } '

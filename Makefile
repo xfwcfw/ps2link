@@ -30,7 +30,8 @@ RM=rm -f
 
 include $(PS2SDK)/Defs.make
 
-EEFILES=ee/ps2link.elf
+EEELFFILES=ee/ps2link.elf
+EEKELFFILES=ee/ps2link.kelf
 
 IRXFILES=iop/ps2link.irx $(PS2SDK)/iop/irx/ps2ip.irx \
 	$(PS2ETH)/smap/ps2smap.irx \
@@ -44,13 +45,13 @@ VARIABLES=DEBUG=$(DEBUG) ZEROCOPY=$(ZEROCOPY) PWOFFONRESET=$(PWOFFONRESET) CACHE
 TARGETS = iop builtins ee
 
 all: $(TARGETS)
-	@for file in $(IRXFILES); do \
-		new=`echo $${file/*\//}|tr "[:lower:]" "[:upper:]"`; \
-		cp $$file bin/$$new; \
-	done;
-	@for file in $(EEFILES); do \
+	@for file in $(EEELFFILES); do \
 		new=`echo $${file/*\//}|tr "[:lower:]" "[:upper:]"`; \
 		ps2-packer $$file bin/$$new; \
+	done;
+	@for file in $(EEKELFFILES); do \
+		new=`echo $${file/*\//}|tr "[:lower:]" "[:upper:]"`; \
+		cp $$file bin/$$new; \
 	done;
 
 ee:
@@ -71,11 +72,11 @@ check:
 dist: all
 	@rm -rf dist
 	@mkdir -p dist/ps2link
-	@for file in $(IRXFILES); do \
+	@for file in $(EEELFFILES); do \
 		new=`echo $${file/*\//}|tr "[:lower:]" "[:upper:]"`; \
 		cp $$file dist/ps2link/$$new; \
 	done;
-	@for file in $(EEFILES); do \
+	@for file in $(EEKELFFILES); do \
 		new=`echo $${file/*\//}|tr "[:lower:]" "[:upper:]"`; \
 		cp $$file dist/ps2link/$$new; \
 	done;
