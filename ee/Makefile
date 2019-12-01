@@ -9,34 +9,15 @@ EE_LDFLAGS += -L$(SBVLITE)/lib
 EE_LIBS += -lpatches -ldebug
 
 # Normal low loading version
-ifeq ($(BUILTIN_IRXS),1)
-LOADADDR  = 0xa8000
-else
-LOADADDR  = 0xc0000
-endif
-STACKADDR = 0xf8000
-
-# This is to build a highloading version
-ifeq ($(LOADHIGH),1)
-ifeq ($(BUILTIN_IRXS),1)
-LOADADDR  = 0x1ee8000
-else
-LOADADDR  = 0x1f00000
-endif
-STACKADDR = 0x1f38000
-EE_CFLAGS += -D_LOADHIGHVER
-endif
+LOADADDR  = 0x100000
+STACKADDR = 0x1f8000
 
 # This is to builtin the IRXs into ps2link
-ifeq ($(BUILTIN_IRXS),1)
 EE_CFLAGS += -DBUILTIN_IRXS
-EE_LDFLAGS += ps2link_irx.o ps2ip_irx.o ps2smap_irx.o ps2dev9_irx.o ioptrap_irx.o poweroff_irx.o
-endif
+EE_LDFLAGS += ps2link_irx.o ps2ip_irx.o ps2smap_irx.o ps2dev9_irx.o ioptrap_irx.o poweroff_irx.o iomanX_irx.o
 
-ifeq ($(BUILTIN_IRXS),1)
 ifeq ($(CACHED_CFG),1)
 EE_CFLAGS += -DUSE_CACHED_CFG
-endif
 endif
 
 # This is to enable the debug mode into ps2link

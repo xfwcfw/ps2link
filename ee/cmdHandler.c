@@ -54,7 +54,8 @@ static int pkoWriteMem(pko_pkt_mem_io *);
 #define B_MC 2
 #define B_HOST 3
 #define B_CC 4
-#define B_UNKN 5
+#define B_XFROM 5
+#define B_UNKN 6
 
 ////////////////////////////////////////////////////////////////////////
 // Globals
@@ -750,7 +751,7 @@ void pkoReset(void)
 	return;
 #endif
 
-	if ((boot == B_MC) || (boot == B_HOST) || (boot == B_UNKN) || (boot == B_CC))
+	if ((boot == B_MC) || (boot == B_HOST) || (boot == B_UNKN) || (boot == B_CC) || (boot == B_XFROM))
 	{
 		argv[0] = elfName;
 		SifLoadFileExit();

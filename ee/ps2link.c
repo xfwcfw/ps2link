@@ -67,11 +67,11 @@ void *ioptrap_mod = NULL, *ps2dev9_mod = NULL, *ps2ip_mod = NULL, *ps2smap_mod =
 int ioptrap_size = 0, ps2dev9_size = 0, ps2ip_size = 0, poweroff_size = 0, ps2smap_size = 0, ps2link_size = 0;
 #else
 extern unsigned char _binary_ioptrap_irx_start[], _binary_ps2dev9_irx_start[], _binary_ps2ip_irx_start[], _binary_ps2smap_irx_start[],
-	_binary_poweroff_irx_start[], _binary_ps2link_irx_start[];
+	_binary_poweroff_irx_start[], _binary_ps2link_irx_start[], _binary_iomanX_irx_start[];
 extern unsigned char _binary_ioptrap_irx_end[], _binary_ps2dev9_irx_end[], _binary_ps2ip_irx_end[], _binary_ps2smap_irx_end[], _binary_poweroff_irx_end[],
-	_binary_ps2link_irx_end[];
+	_binary_ps2link_irx_end[], _binary_iomanX_irx_end[];
 static unsigned int _binary_ioptrap_irx_size, _binary_ps2dev9_irx_size, _binary_ps2ip_irx_size, _binary_ps2smap_irx_size, _binary_poweroff_irx_size,
-	_binary_ps2link_irx_size;
+	_binary_ps2link_irx_size, _binary_iomanX_irx_size;
 #endif
 
 // Flags for which type of boot
@@ -79,7 +79,8 @@ static unsigned int _binary_ioptrap_irx_size, _binary_ps2dev9_irx_size, _binary_
 #define B_MC 2
 #define B_HOST 3
 #define B_CC 4
-#define B_UNKN 5
+#define B_XFROM 5
+#define B_UNKN 6
 int boot;
 
 ////////////////////////////////////////////////////////////////////////
@@ -194,6 +195,10 @@ static void getIpConfig(void)
 	{
 		strcpy(path, "mc0:/BOOT/IPCONFIG.DAT");
 	}
+	else if (boot == B_XFROM)
+	{
+		strcpy(path, "xfrom:/IPCONFIG.DAT");
+	}
 	else
 	{
 		sprintf(path, "%s%s", elfPath, "IPCONFIG.DAT");
@@ -245,14 +250,12 @@ static void getIpConfig(void)
 		i++;
 	}
 
-	scr_printf("Net config: ");
 	for (t = 0, i = 0; t < 3; t++)
 	{
 		strncpy(&if_conf[i], &buf[i], 15);
-		scr_printf("%s  ", &if_conf[i]);
+		scr_printf("if_conf[%d]: '%s'\n", i, &if_conf[i]);
 		i += strlen(&if_conf[i]) + 1;
 	}
-	scr_printf("\n");
 	// get extra config filename
 
 #ifndef USE_CACHED_CFG
@@ -366,17 +369,13 @@ static int loadHostModBuffers()
 		getIpConfig();
 
 		if (!(ioptrap_mod = modbuf_load(ioptrap_path, &ioptrap_size)))
-		{
 			return -1;
-		}
 
 		if (!(poweroff_mod = modbuf_load(poweroff_path, &poweroff_size)))
 			return -1;
 
 		if (!(ps2dev9_mod = modbuf_load(ps2dev9_path, &ps2dev9_size)))
-		{
 			return -1;
-		}
 
 		if (!(ps2ip_mod = modbuf_load(ps2ip_path, &ps2ip_size)))
 			return -1;
@@ -387,7 +386,6 @@ static int loadHostModBuffers()
 		if (!(ps2link_mod = modbuf_load(ps2link_path, &ps2link_size)))
 			return -1;
 	}
-
 	else
 	{
 		dbgscr_printf("Using Cached Modules\n");
@@ -407,21 +405,6 @@ static void loadModules(void)
 
 	dbgscr_printf("loadModules \n");
 
-#ifdef USE_CACHED_CFG
-	if (if_conf_len == 0)
-	{
-#endif
-		if ((boot == B_MC) || (boot == B_CC))
-		{
-			pkoLoadModule("rom0:SIO2MAN", 0, NULL);
-			pkoLoadModule("rom0:MCMAN", 0, NULL);
-			pkoLoadModule("rom0:MCSERV", 0, NULL);
-		}
-#ifdef USE_CACHED_CFG
-		return;
-	}
-#endif
-
 #ifdef BUILTIN_IRXS
 	_binary_ioptrap_irx_size = _binary_ioptrap_irx_end - _binary_ioptrap_irx_start;
 	_binary_ps2dev9_irx_size = _binary_ps2dev9_irx_end - _binary_ps2dev9_irx_start;
@@ -429,15 +412,44 @@ static void loadModules(void)
 	_binary_ps2smap_irx_size = _binary_ps2smap_irx_end - _binary_ps2smap_irx_start;
 	_binary_poweroff_irx_size = _binary_poweroff_irx_end - _binary_poweroff_irx_start;
 	_binary_ps2link_irx_size = _binary_ps2link_irx_end - _binary_ps2link_irx_start;
+	_binary_iomanX_irx_size = _binary_iomanX_irx_end - _binary_iomanX_irx_start;
+#endif
 
 #ifdef USE_CACHED_CFG
-	scr_printf("Net config: ");
+	if (if_conf_len == 0)
+	{
+#endif
+		if (boot == B_MC || boot == B_CC)
+		{
+			pkoLoadModule("rom0:SIO2MAN", 0, NULL);
+			pkoLoadModule("rom0:MCMAN", 0, NULL);
+			pkoLoadModule("rom0:MCSERV", 0, NULL);
+		}
+		else if (boot == B_XFROM)
+		{
+			dbgscr_printf("Exec iomanX module. (%x,%d) ", (unsigned int)_binary_iomanX_irx_start, _binary_iomanX_irx_size);
+			SifExecModuleBuffer(_binary_iomanX_irx_start, _binary_iomanX_irx_size, 0, NULL, &ret);
+			dbgscr_printf("[%d] returned\n", ret);
+			dbgscr_printf("Exec ps2dev9 module. (%x,%d) ", (unsigned int)_binary_ps2dev9_irx_start, _binary_ps2dev9_irx_size);
+			SifExecModuleBuffer(_binary_ps2dev9_irx_start, _binary_ps2dev9_irx_size, 0, NULL, &ret);
+			dbgscr_printf("[%d] returned\n", ret);
+			dbgscr_printf("Exec PFLASH module. ");
+			pkoLoadModule("rom0:PFLASH", 0, NULL);
+			dbgscr_printf("Exec PXFROMMAN module. ");
+			pkoLoadModule("rom0:PXFROMMAN", 0, NULL);
+		}
+#ifdef USE_CACHED_CFG
+		return;
+	}
+#endif
+
+#ifdef BUILTIN_IRXS
+#ifdef USE_CACHED_CFG
 	for (t = 0, i = 0; t < 3; t++)
 	{
-		scr_printf("%s  ", &if_conf[i]);
+		scr_printf("if_conf[%d]: '%s'\n", i, &if_conf[i]);
 		i += strlen(&if_conf[i]) + 1;
 	}
-	scr_printf("\n");
 #else
 	getIpConfig();
 #endif
@@ -460,6 +472,7 @@ static void loadModules(void)
 	dbgscr_printf("Exec ps2link module. (%x,%d) ", (unsigned int)_binary_ps2link_irx_start, _binary_ps2link_irx_size);
 	SifExecModuleBuffer(_binary_ps2link_irx_start, _binary_ps2link_irx_size, 0, NULL, &ret);
 	dbgscr_printf("[%d] returned\n", ret);
+	
 	dbgscr_printf("All modules loaded on IOP.\n");
 #else
 	if (boot == B_HOST)
@@ -482,7 +495,6 @@ static void loadModules(void)
 		dbgscr_printf("Exec ps2link module. (%x,%d) ", (u32)ps2link_mod, ps2link_size);
 		SifExecModuleBuffer(ps2link_mod, ps2link_size, 0, NULL, &ret);
 		dbgscr_printf("[%d] returned\n", ret);
-
 		dbgscr_printf("All modules loaded on IOP.\n");
 	}
 	else
@@ -582,36 +594,6 @@ static void setPathInfo(char *path)
 #endif
 
 	dbgscr_printf("path is %s\n", elfPath);
-}
-
-////////////////////////////////////////////////////////////////////////
-// Clear user memory
-void wipeUserMem(void)
-{
-	int i;
-	// Whipe user mem
-	for (i = 0x100000; i < 0x2000000; i += 64)
-	{
-		asm("\tsq $0, 0(%0) \n"
-		    "\tsq $0, 16(%0) \n"
-		    "\tsq $0, 32(%0) \n"
-		    "\tsq $0, 48(%0) \n" ::"r"(i));
-	}
-}
-
-////////////////////////////////////////////////////////////////////////
-// Clear user memory - Load High and Host version
-void wipeUserMemLoadHigh(void)
-{
-	int i;
-	// Whipe user mem, apart from last bit
-	for (i = 0x100000; i < 0x1F00000; i += 64)
-	{
-		asm("\tsq $0, 0(%0) \n"
-		    "\tsq $0, 16(%0) \n"
-		    "\tsq $0, 32(%0) \n"
-		    "\tsq $0, 48(%0) \n" ::"r"(i));
-	}
 }
 
 void restartIOP()
@@ -828,6 +810,12 @@ int main(int argc, char *argv[])
 		scr_printf("Booting as CC firmware\n");
 		boot = B_CC;
 	}
+	else if (!strncmp(bootPath, "xfrom", strlen("xfrom")))
+	{
+		// xfrom (PSX flash)
+		scr_printf("Booting from xfrom (%s)\n", bootPath);
+		boot = B_XFROM;
+	}
 	else
 	{
 		// Unknown
@@ -839,7 +827,7 @@ int main(int argc, char *argv[])
 	if (if_conf_len == 0)
 	{
 		scr_printf("Initial boot, will load config then reset\n");
-		if (boot == B_MC || boot == B_CC)
+		if (boot == B_MC || boot == B_CC || boot == B_XFROM)
 			restartIOP();
 
 		getIpConfig();
