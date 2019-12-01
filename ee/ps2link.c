@@ -431,22 +431,13 @@ static void loadModules(void)
 	_binary_ps2link_irx_size = _binary_ps2link_irx_end - _binary_ps2link_irx_start;
 
 #ifdef USE_CACHED_CFG
-	if (if_conf_len == 0)
+	scr_printf("Net config: ");
+	for (t = 0, i = 0; t < 3; t++)
 	{
-		getIpConfig();
+		scr_printf("%s  ", &if_conf[i]);
+		i += strlen(&if_conf[i]) + 1;
 	}
-	else
-	{
-		i = 0;
-		scr_printf("Net config: ");
-		for (t = 0, i = 0; t < 3; t++)
-		{
-			scr_printf("%s  ", &if_conf[i]);
-			i += strlen(&if_conf[i]) + 1;
-		}
-		scr_printf("\n");
-	}
-
+	scr_printf("\n");
 #else
 	getIpConfig();
 #endif
